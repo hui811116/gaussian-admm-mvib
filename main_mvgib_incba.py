@@ -2,7 +2,6 @@ import numpy as np
 import sys
 import os
 import algorithms as alg
-import utils as ut
 
 # we solve the first view with ADMM-GIB,
 # call GaussianADMMIB2 (both types will do in first step, use A case will be easier here)
@@ -53,7 +52,7 @@ cov_all[n12:n12+ny,n12:n12+ny] = cov_y
 #print(cov_all)
 # sanity check, if cholesky decomposition exists
 samp_mat = np.linalg.cholesky(cov_all)
-print("sanity check passed.")
+#print("sanity check passed.")
 # now solve the first view with GIB, can use BA for simplicity
 
 gamma_1 = 0.22
@@ -74,5 +73,5 @@ prior_z1cx2 = ba_z1 - ba_z1x2 @ np.linalg.inv(cov_x2) @ ba_z1x2.T
 prior_x2cz1 = cov_x2 - ba_z1x2.T @ np.linalg.inv(ba_z1) @ ba_z1x2
 
 gamma_2 = 0.2
-o2_dict = alg.GaussianADMMMvIBInc(cov_x2,ba_z1,ba_z1x2.T,cov_y,ba_z1y.T,cov_x2y,gamma_2,maxiter,conv_thres)
-print(o2_dict)
+o2ba_dict = alg.GaussianMvIBIncBA(cov_x2,ba_z1,ba_z1x2.T,cov_y,ba_z1y.T,cov_x2y,gamma_2,maxiter,conv_thres)
+print(o2ba_dict)

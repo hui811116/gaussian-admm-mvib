@@ -62,7 +62,7 @@ print("sanity check passed.")
 maxiter = 50000
 conv_thres = 1e-5
 
-beta_range = np.geomspace(1,128,num=256) # collect: beta, izx, izy, niter, conv
+beta_range = np.geomspace(1,1024,num=512) # collect: beta, izx, izy, niter, conv
 # NOTE: because this starts with deterministic initialization, no multiple runs
 res_v1 = np.zeros((len(beta_range),5))
 res_v2 = np.zeros((len(beta_range),5))

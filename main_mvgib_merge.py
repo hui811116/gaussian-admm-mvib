@@ -60,7 +60,7 @@ print("sanity check passed.")
 
 cov_x12cy = cov_x12 - cov_x12y @ np.linalg.inv(cov_y) @ cov_x12y.T
 
-beta_range = np.geomspace(1,128,num=256) # collect: beta, izx, izy, niter, conv
+beta_range = np.geomspace(1,1024,num=512) # collect: beta, izx, izy, niter, conv
 res_merge = np.zeros((len(beta_range),5))
 
 maxiter = 100000

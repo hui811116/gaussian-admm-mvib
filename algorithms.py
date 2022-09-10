@@ -292,11 +292,9 @@ def GaussianADMMMvIBInc(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxit
 	prior_z1x2_cond_z1 = cov_x2z1.T @ inv_x2cz1 @ cov_x2z1
 	prior_yx2_cond_z1  = cov_x2y.T @ inv_x2cz1 @ cov_x2z1
 
-	cpy_cov_eps_z = copy.deepcopy(cov_eps_z)
-	cpy_cov_eps_z[:nx,:nx] += Ax[:nx,:nx] @ cov_x2cz1 @ Ax[:nx,:nx].T
+	cpy_cov_eps_z = Ax[:,:nx] @ cov_x2cz1 @ Ax[:,:nx].T + cov_eps_z
 	inv_z2cz1 = np.linalg.inv(cpy_cov_eps_z)
-	cpy_cov_eps_z = copy.deepcopy(cov_eps_z)
-	cpy_cov_eps_z[:nx,:nx] += Ax[:nx,:nx] @ cov_x2cyz1@ Ax[:nx,:nx].T
+	cpy_cov_eps_z = Ax[:,:nx] @ cov_x2cyz1@ Ax[:,:nx].T + cov_eps_z
 	inv_z2cyz1  = np.linalg.inv(cpy_cov_eps_z)
 
 	conv_flag = False
@@ -320,11 +318,9 @@ def GaussianADMMMvIBInc(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxit
 		err_x = new_cov_eps_zcx - new_cov_eps_z
 		dual_eps += penalty_c * err_x
 		# new combination
-		cpy_cov_eps_z = copy.deepcopy(new_cov_eps_z)
-		cpy_cov_eps_z[:nx,:nx] += Ax[:nx,:nx] @ cov_x2cz1 @ Ax[:nx,:nx].T
+		cpy_cov_eps_z = Ax[:,:nx] @ cov_x2cz1 @ Ax[:,:nx].T + new_cov_eps_z
 		inv_z2cz1 = np.linalg.inv(cpy_cov_eps_z) # this is z2|z1
-		cpy_cov_eps_z = copy.deepcopy(new_cov_eps_z)
-		cpy_cov_eps_z[:nx,:nx] += Ax[:nx,:nx] @ cov_x2cyz1@ Ax[:nx,:nx].T
+		cpy_cov_eps_z = Ax[:,:nx] @ cov_x2cyz1@ Ax[:,:nx].T + new_cov_eps_z
 		inv_z2cyz1= np.linalg.inv(cpy_cov_eps_z)
 		# now we update A2, A21
 		grad_Ax = (gamma-1) * inv_z2cz1.T @ Ax@ patch_x2cz1 + inv_z2cyz1.T@ Ax @ patch_x2cyz1
@@ -340,10 +336,8 @@ def GaussianADMMMvIBInc(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxit
 			cov_eps_zcx = new_cov_eps_zcx
 			cov_eps_z   = new_cov_eps_z
 	if conv_flag:
-		ker_z = copy.deepcopy(new_cov_eps_z)
-		ker_z[:nx,:nx] += Ax[:nx,:nx] @ cov_x2cz1 @ Ax[:nx,:nx].T
-		ker_zy = copy.deepcopy(new_cov_eps_z)
-		ker_zy[:nx,:nx] += Ax[:nx,:nx]@ cov_x2cyz1@ Ax[:nx,:nx].T
+		ker_z = Ax[:,:nx] @ cov_x2cz1 @ Ax[:,:nx].T + new_cov_eps_z
+		ker_zy = Ax[:,:nx]@ cov_x2cyz1@ Ax[:,:nx].T + new_cov_eps_z
 		# calculate mizxcz1
 		mizxcz1 = ut.calcGMI(ker_z,cov_eps_zcx)
 		mizycz1 = ut.calcGMI(ker_z,ker_zy)
@@ -540,3 +534,76 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 			Ax1 = new_Ax1
 			Ax2 = new_Ax2
 	return {"conv":conv_flag,"niter":itcnt,"cov_z":cov_zc,"cov_zcy":cov_zcy,"Ax1":Ax1,"Ax2":Ax2}
+
+
+def GaussianMvIBIncBA(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxiter,convthres,**kwargs):
+	nx = cov_x2.shape[0]
+	nz1 = cov_z1.shape[0]
+	nz = nx+nz1
+	ny = cov_y.shape[0]
+	cov_eps_zcx = np.eye(nz)
+
+	rng = np.random.default_rng()
+	Ax = np.zeros((nz,nx+nz1))
+	Ax[:,:nz] = np.eye(nz)
+	if nx+nz1-nz>0:
+		Ax[:,nz:] = np.randint(0,1,size=(nz,nx+nz1-nz))
+		Ax = Ax/np.linalg.norm(Ax,axis=0)
+	#rnd_Ax = np.random.permutation(nx+nz1)
+	#Ax = Ax[:,rnd_Ax]
+	# precomputing prior matrices
+	# inversions
+	inv_z1 = np.linalg.inv(cov_z1)
+	cov_ycz1 = cov_y - cov_yz1 @ inv_z1 @ cov_yz1.T
+	inv_ycz1 = np.linalg.inv(cov_ycz1)
+
+	# prior matrix
+	patch_yx2_z1x2 = np.concatenate((cov_x2y.T,cov_x2z1.T),axis=0)
+	joint_yz1 = np.block([[cov_y,cov_yz1],[cov_yz1.T,cov_z1]])
+	cov_x2cyz1 = cov_x2 - patch_yx2_z1x2.T @ np.linalg.inv(joint_yz1) @ patch_yx2_z1x2
+	cov_x2cz1 = cov_x2 - cov_x2z1 @ inv_z1 @ cov_x2z1.T
+	inv_x2cz1 = np.linalg.inv(cov_x2cz1)
+
+	# block matrix
+	cov_x2z1_y = np.concatenate((cov_x2y,cov_yz1.T),axis=0)
+	cov_x2z1_z1= np.concatenate((cov_x2z1,cov_z1),axis=0)
+
+	conv_flag = False
+	itcnt = 0
+	while itcnt < maxiter:
+		itcnt += 1
+		# compute the needed matrices
+		mat_z2_z1 = Ax[:,:nx] @ cov_x2cz1 @ Ax[:,:nx].T + cov_eps_zcx
+		mat_z2_yz1 = Ax[:,:nx] @ cov_x2cyz1 @ Ax[:,:nx].T + cov_eps_zcx
+		inv_z2_z1 = np.linalg.inv(mat_z2_z1)
+		inv_z2_yz1 = np.linalg.inv(mat_z2_yz1)
+		# covariance update
+		mat_K2 = (1-1/gamma)*inv_z2_z1 + 1/gamma * inv_z2_yz1
+		new_eps_zcx = np.linalg.inv(mat_K2)
+
+		# mean operator update
+		helper_mat = Ax[:,:nx]@ (cov_x2y - cov_x2z1 @ inv_z1 @ cov_yz1.T)
+		helper_mat_yx2= cov_x2y.T - cov_yz1 @ inv_z1 @ cov_x2z1.T
+		part_yx2 = (cov_x2y.T - cov_yz1 @ inv_z1 @ cov_x2z1.T) @ inv_x2cz1
+		part_yz1 = helper_mat.T @ inv_z2_z1 @ Ax @ np.concatenate((cov_x2z1,cov_z1),axis=0) @ inv_z1 \
+					- helper_mat_yx2 @ cov_x2cz1@ cov_x2z1@ inv_z1
+		new_Ax = new_eps_zcx @ inv_z2_yz1 @ helper_mat @ inv_ycz1 @ np.concatenate((part_yx2,part_yz1),axis=1)
+
+		# convergence
+		conv_eps = np.sum((new_eps_zcx - cov_eps_zcx)**2)
+		conv_Ax  = np.sum((new_Ax - Ax)**2)
+		if conv_eps < convthres and conv_Ax < convthres:
+			conv_flag = True
+			break
+		else:
+			cov_eps_zcx = new_eps_zcx
+			Ax = new_Ax
+	if conv_flag:
+		ker_z = Ax[:,:nx] @ cov_x2cz1 @ Ax[:,:nx].T + cov_eps_zcx
+		ker_zy =Ax[:,:nx] @ cov_x2cyz1 @ Ax[:,:nx].T + cov_eps_zcx
+		mizxcz1 = ut.calcGMI(ker_z,cov_eps_zcx)
+		mizycz1 = ut.calcGMI(ker_zy,cov_eps_zcx)
+	else:
+		mizxcz1 = 0
+		mizycz1 = 0
+	return {"conv":conv_flag,"niter":itcnt,"mixcz":mizxcz1,"miycz":mizycz1,"Axz":Ax,"cov_eps":cov_eps_zcx}

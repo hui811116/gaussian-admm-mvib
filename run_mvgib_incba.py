@@ -7,11 +7,11 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--penalty", type=float, default=32.0, help="penalty coefficient")
-parser.add_argument("--ss", type=float, default=4e-3, help="step size for gradient descent")
+#parser.add_argument("--penalty", type=float, default=32.0, help="penalty coefficient")
+#parser.add_argument("--ss", type=float, default=4e-3, help="step size for gradient descent")
 parser.add_argument("--maxiter", type=int, default=100000, help="maximum number of iterations")
 parser.add_argument("--convthres",type=float, default=1e-5, help="convergence threshold")
-parser.add_argument("--save_name",type=str, default="result_inc",help="save file name")
+parser.add_argument("--save_name",type=str, default="result_incba",help="save file name")
 parser.add_argument("--gamma_min",type=float,default=0.01, help="minimum gamma value (second step)")
 parser.add_argument("--gamma_num",type=int, default=32, help="number of gamma on the second stage")
 parser.add_argument("--beta_max",type=float, default=256, help="maximum beta value")
@@ -82,10 +82,10 @@ conv_thres = args.convthres
 res_inc_x1x2 = np.zeros((len(beta_range)*len(gamma_range),9))
 ncnt = 0
 
-param_dict = {"penalty":args.penalty,"ss":args.ss}
-print(param_dict)
+param_dict = {}
+#print(param_dict)
 
-print(",".join(["beta","gamma","miz1x1","miz1y","miz2x1cz1","miz2ycz1","niter1","niter2","conv2"]))
+#print(",".join(["beta","gamma","miz1x1","miz1y","miz2x1cz1","miz2ycz1","niter1","niter2","conv2"]))
 if args.first_view == 1:
 	for bidx,beta in enumerate(beta_range):
 		out_dict = alg.GaussianBA(cov_x1,cov_y,cov_x1y,beta,maxiter,conv_thres)
@@ -108,7 +108,8 @@ if args.first_view == 1:
 		#prior_x2cz1 = cov_x2 - ba_z1x2.T @ np.linalg.inv(ba_z1) @ ba_z1x2
 
 		for gidx, gamma in enumerate(gamma_range):
-			inc_dict = alg.GaussianADMMMvIBInc(cov_x2,ba_z1,ba_z1x2.T,cov_y,ba_z1y.T,cov_x2y,gamma,maxiter,conv_thres,**param_dict)
+			#inc_dict = alg.GaussianADMMMvIBInc(cov_x2,ba_z1,ba_z1x2.T,cov_y,ba_z1y.T,cov_x2y,gamma,maxiter,conv_thres,**param_dict)
+			inc_dict = alg.GaussianMvIBIncBA(cov_x2,ba_z1,ba_z1x2.T,cov_y,ba_z1y.T,cov_x2y,gamma,maxiter,conv_thres,**param_dict)
 			inc_niter = inc_dict["niter"]
 			inc_conv = int(inc_dict["conv"])
 			if inc_conv:
@@ -121,7 +122,7 @@ if args.first_view == 1:
 				miczy = 0
 			tmp_output = [beta,gamma,ba_mizx,ba_mizy,miczx,miczy,ba_niter,inc_niter,inc_conv]
 			res_inc_x1x2[ncnt,:] = np.array([beta,gamma,ba_mizx,ba_mizy,miczx,miczy,ba_niter,inc_niter,inc_conv])
-			print(",".join(["{:.4f}".format(item) for item in tmp_output]))
+			#print(",".join(["{:.4f}".format(item) for item in tmp_output]))
 			ncnt+=1
 elif args.first_view==2:
 	for bidx,beta in enumerate(beta_range):
@@ -145,7 +146,8 @@ elif args.first_view==2:
 		#prior_x2cz1 = cov_x2 - ba_z1x1.T @ np.linalg.inv(ba_z1) @ ba_z1x1
 
 		for gidx, gamma in enumerate(gamma_range):
-			inc_dict = alg.GaussianADMMMvIBInc(cov_x1,ba_z1,ba_z1x1.T,cov_y,ba_z1y.T,cov_x1y,gamma,maxiter,conv_thres,**param_dict)
+			#inc_dict = alg.GaussianADMMMvIBInc(cov_x1,ba_z1,ba_z1x1.T,cov_y,ba_z1y.T,cov_x1y,gamma,maxiter,conv_thres,**param_dict)
+			inc_dict = alg.GaussianMvIBIncBA(cov_x1,ba_z1,ba_z1x1.T,cov_y,ba_z1y.T,cov_x1y,gamma,maxiter,conv_thres,**param_dict)
 			inc_niter = inc_dict["niter"]
 			inc_conv = int(inc_dict["conv"])
 			if inc_conv:
@@ -158,7 +160,7 @@ elif args.first_view==2:
 				miczy = 0
 			tmp_output = [beta,gamma,ba_mizx,ba_mizy,miczx,miczy,ba_niter,inc_niter,inc_conv]
 			res_inc_x1x2[ncnt,:] = np.array([beta,gamma,ba_mizx,ba_mizy,miczx,miczy,ba_niter,inc_niter,inc_conv])
-			print(",".join(["{:.4f}".format(item) for item in tmp_output]))
+			#print(",".join(["{:.4f}".format(item) for item in tmp_output]))
 			ncnt+=1
 
 with open(args.save_name+".npy","wb") as fid:
