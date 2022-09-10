@@ -85,7 +85,7 @@ param_dict = {"penalty":args.penalty,"ss":args.ss}
 result_pkl = []
 for gx1, gamma_1 in enumerate(gamma_range):
 	for gx2, gamma_2 in enumerate(gamma_range):
-		print("progression")
+		#print("progression")
 		cc_out = alg.GaussianMvIBCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
 		#cc_out = alg.GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
 		#cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gamma2,maxiter,convthres
