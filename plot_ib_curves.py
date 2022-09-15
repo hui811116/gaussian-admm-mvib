@@ -14,13 +14,16 @@ with open("result_all/result_merge_ba.npy",'rb') as fid:
 #	res_inc_x12 = np.load(fid)
 #with open("result_all/gmvib_inc_c32_ss4e-3_b32_g32_x21.npy","rb") as fid:
 #	res_inc_x21 = np.load(fid)
+with open("result_all/gmvib_inc_c32_ss4e-3_b128_g128_gmin1e-3_bmax1024_x12.npy","rb") as fid:
+	res_inc_grid_x12 = np.load(fid)
 
-with open("result_all/gmvib_inc_c32_ss4e-3_b64_g64_gmin2e-3_bmax1024_x21.npy",'rb') as fid:
+with open("result_all/gmvib_inc_c32_ss4e-3_b64_g64_bmax1024_gmin1e-3_x21.npy",'rb') as fid:
 	res_inc_grid_x21 = np.load(fid)
-with open("result_all/gmvib_incba_b128_g128_bmax1024_gmin1e-3_x12.npy",'rb') as fid:
+
+with open("result_all/gmvib_incba_b128_g128_bmax4096_gmin1e-3_x12.npy",'rb') as fid:
 	res_incba_x12 = np.load(fid)
-#with open("result_all/gmvib_incba_b128_g128_bmax1024_gmin1e-3_x21.npy",'rb') as fid:
-#	res_incba_x21 = np.load(fid)
+with open("result_all/gmvib_incba_b128_g128_bmax1024_gmin1e-3_x21.npy",'rb') as fid:
+	res_incba_x21 = np.load(fid)
 
 def ibOptSelect(pairs_mi,precision):
 	(mizx,mizy) = pairs_mi
@@ -53,9 +56,12 @@ def ibOptSelect(pairs_mi,precision):
 
 sel_idx = res_incba_x12[:,8] == 1
 combine_incba_x12 = res_incba_x12[sel_idx,:]
-#sel_idx = res_incba_x21[:,8] == 1
-#combine_incba_x21 = res_incba_x21[sel_idx,:]
+sel_idx = res_incba_x21[:,8] == 1
+combine_incba_x21 = res_incba_x21[sel_idx,:]
 
+
+sel_idx = res_inc_grid_x12[:,8] == 1
+combine_inc_grid_x12 = res_inc_grid_x12[sel_idx,:]
 sel_idx = res_inc_grid_x21[:,8] == 1
 combine_inc_grid_x21 = res_inc_grid_x21[sel_idx,:]
 
@@ -84,22 +90,31 @@ ax.plot(res_merge[:,1],res_merge[:,2],label=r"Merge",color="k",linestyle="dotted
 #	label=r"Inc. $X_{2,1}$",color="tab:red",marker="*")
 
 process_incba_x12 = ibOptSelect((combine_incba_x12[:,2]+combine_incba_x12[:,4],combine_incba_x12[:,3]+combine_incba_x12[:,5]),1)
-ax.scatter(process_incba_x12[:,0],process_incba_x12[:,1],24,label=r"Inc-BA. $X_{1,2}$",color="tab:green",marker="^")
+ax.scatter(process_incba_x12[:,0],process_incba_x12[:,1],24,label=r"BA",color="tab:blue",marker="^",facecolor="none")
+
 #process_incba_x21 = ibOptSelect((combine_incba_x21[:,2]+combine_incba_x21[:,4],combine_incba_x21[:,3]+combine_incba_x21[:,5]),1)
 #ax.scatter(process_incba_x21[:,0],process_incba_x21[:,1],24,label=r"Inc-BA. $X_{2,1}$",color="tab:olive",marker="s")
 
-process_grid_x21 = ibOptSelect((combine_inc_grid_x21[:,2]+combine_inc_grid_x21[:,4],combine_inc_grid_x21[:,3]+combine_inc_grid_x21[:,5]),1)
-ax.scatter(process_grid_x21[:,0],process_grid_x21[:,1],24,label=r"Inc-Grid. $X_{2,1}$",color="tab:cyan",marker="o")
+process_grid_x12 = ibOptSelect((combine_inc_grid_x12[:,2]+combine_inc_grid_x12[:,4],combine_inc_grid_x12[:,3]+combine_inc_grid_x12[:,5]),1)
+ax.scatter(process_grid_x12[:,0],process_grid_x12[:,1],24,label=r"Proposed Inc.",color="tab:red",marker="d",facecolor="none")
+
+#process_grid_x21 = ibOptSelect((combine_inc_grid_x21[:,2]+combine_inc_grid_x21[:,4],combine_inc_grid_x21[:,3]+combine_inc_grid_x21[:,5]),1)
+#ax.scatter(process_grid_x21[:,0],process_grid_x21[:,1],24,label=r"Proposed Inc. $X_{2,1}$",color="tab:cyan",marker="o",facecolor="none")
 
 ax.grid("on")
 ax.set_xlabel(r"$I(\{Z\};X)$ nats",fontsize=fs_lab)
 ax.set_ylabel(r"$I(\{Z\};Y)$ nats",fontsize=fs_lab)
 ax.tick_params(axis="both",labelsize=fs_tick)
 ax.legend(loc="best", fontsize=fs_leg)
-ax.set_xlim([0,6.25])
-#ax.set_ylim([0.8,1.0])
+# full
+'''
+ax.set_xlim([0,8.3])
+'''
+# zoom
+ax.set_xlim([5,8.3])
+ax.set_ylim([0.9,1.0])
 plt.tight_layout()
-#plt.savefig("figure_full_ibcurve.eps",format="eps")
+plt.savefig("figure_zoom_ibcurve.eps",format="eps")
 plt.show()
 
 # plot the progressing

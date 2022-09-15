@@ -9,13 +9,13 @@ import pickle
 parser = argparse.ArgumentParser()
 parser.add_argument("--penalty", type=float, default=64.0, help="penalty coefficient")
 parser.add_argument("--ss", type=float, default=2e-3, help="step size for gradient descent")
-parser.add_argument("--maxiter", type=int, default=200000, help="maximum number of iterations")
+parser.add_argument("--maxiter", type=int, default=150000, help="maximum number of iterations")
 parser.add_argument("--convthres",type=float, default=1e-5, help="convergence threshold")
 parser.add_argument("--save_name",type=str, default="result_cc",help="save file name")
-parser.add_argument("--gamma_min",type=float,default=0.01, help="minimum gamma value (second step)")
-parser.add_argument("--gamma_num",type=int, default=16, help="number of gamma on the second stage")
-parser.add_argument("--beta_max",type=float, default=32, help="maximum beta value")
-parser.add_argument("--beta_num",type=int, default=16, help="number of beta to search")
+parser.add_argument("--gamma_min",type=float,default=0.002, help="minimum gamma value (second step)")
+parser.add_argument("--gamma_num",type=int, default=8, help="number of gamma on the second stage")
+parser.add_argument("--beta_max",type=float, default=1024, help="maximum beta value")
+parser.add_argument("--beta_num",type=int, default=8, help="number of beta to search")
 parser.add_argument("--first_view",type=int, default=1, help="which view starts first")
 
 args = parser.parse_args()
@@ -85,12 +85,12 @@ param_dict = {"penalty":args.penalty,"ss":args.ss}
 result_pkl = []
 for gx1, gamma_1 in enumerate(gamma_range):
 	for gx2, gamma_2 in enumerate(gamma_range):
-		#print("progression")
 		cc_out = alg.GaussianMvIBCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
 		#cc_out = alg.GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
 		#cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gamma2,maxiter,convthres
 		# update the equivalent priors
 		cc_conv = int(cc_out['conv'])
+		print("progress, gamma1={:.5f}, gamma2={:.5f}, convergence={:}".format(gamma_1,gamma_2,cc_conv))
 		Ax = cc_out["Ax"]
 		cov_z = cc_out["cov_z"]
 		cov_zcy = cc_out["cov_zcy"]

@@ -490,20 +490,25 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 		grad_cy = 0.5 * np.linalg.inv(cov_zcy).T -dual_x1y - penalty_c*err_y1 - dual_x2y - penalty_c* err_y2
 		new_zcy = cov_zcy- ss_s * grad_cy
 		# dual update
-		err_x1 = Ax1 @ cov_x1 @ Ax1.T + new_eps_x1 - new_zc
-		err_x2 = Ax2 @ cov_x2 @ Ax2.T + new_eps_x2 - new_zc
-		dual_x1 += err_x1
-		dual_x2 += err_x2
-		err_x1y = Ax1@ cov_x1cy @ Ax1.T + new_eps_x1 -new_zcy
-		dual_x1y += err_x1y 
-		err_x2y = Ax2@ cov_x2cy @ Ax2.T + new_eps_x2 -new_zcy
-		dual_x2y += err_x2y 
+		tmp_cov_z1 = Ax1 @ cov_x1 @ Ax1.T + new_eps_x1
+		tmp_cov_z1y= Ax1@ cov_x1cy @ Ax1.T + new_eps_x1
+		tmp_cov_z2 = Ax2 @ cov_x2 @ Ax2.T + new_eps_x2
+		tmp_cov_z2y= Ax2@ cov_x2cy @ Ax2.T + new_eps_x2
+
+		err_x1 = tmp_cov_z1 - new_zc
+		err_x2 = tmp_cov_z2 - new_zc
+		dual_x1 += penalty_c * err_x1
+		dual_x2 += penalty_c * err_x2
+		err_x1y = tmp_cov_z1y -new_zcy
+		dual_x1y += penalty_c* err_x1y 
+		err_x2y = tmp_cov_z2y -new_zcy
+		dual_x2y += penalty_c * err_x2y 
 
 		# update inversion
-		inv_eps_x1 = np.linalg.inv(Ax1 @ cov_x1 @ Ax1.T +new_eps_x1)
-		inv_eps_x2 = np.linalg.inv(Ax2 @ cov_x2 @ Ax2.T + new_eps_x2)
-		inv_eps_x1y =np.linalg.inv(Ax1 @ cov_x1cy @ Ax1.T + new_eps_x1)
-		inv_eps_x2y = np.linalg.inv(Ax2@ cov_x2cy @ Ax2.T + new_eps_x2)
+		inv_eps_x1 = np.linalg.inv(tmp_cov_z1)
+		inv_eps_x2 = np.linalg.inv(tmp_cov_z2)
+		inv_eps_x1y =np.linalg.inv(tmp_cov_z1y)
+		inv_eps_x2y = np.linalg.inv(tmp_cov_z2y)
 
 		# update Ax
 		grad_Ax1 = -gamma1 * inv_eps_x1.T @ Ax1 @ cov_x1 \
@@ -524,7 +529,7 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 		conv_vec =np.array([conv_z1,conv_z2,conv_z1y,conv_z2y,conv_Ax1,conv_Ax2],dtype="float32") 
 		#print(conv_vec)
 		if np.all(conv_vec<convthres):
-			conv_thres = True
+			conv_flag = True
 			break
 		else:
 			cov_eps_x1 = new_eps_x1
