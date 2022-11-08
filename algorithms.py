@@ -464,11 +464,6 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 	dual_x1y = Ax1@cov_x1cy @ Ax1.T+cov_eps_x1 -cov_zcy
 	dual_x2y = Ax2@cov_x2cy @ Ax2.T+cov_eps_x2 - cov_zcy
 
-	# precomputed inversions
-	inv_eps_x1 = np.linalg.inv(Ax1 @ cov_x1 @ Ax1.T + cov_eps_x1)
-	inv_eps_x2 = np.linalg.inv(Ax2 @ cov_x2 @ Ax2.T + cov_eps_x2)
-	inv_eps_x1y = np.linalg.inv(Ax1@ cov_x1cy@Ax1.T + cov_eps_x1)
-	inv_eps_x2y = np.linalg.inv(Ax2@ cov_x2cy@Ax2.T + cov_eps_x2)
 
 	conv_flag = False
 	itcnt = 0
@@ -477,11 +472,11 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 		# gradients
 		err_x1 = Ax1@cov_x1  @ Ax1.T + cov_eps_x1 - cov_zc
 		err_y1 = Ax1@cov_x1cy@ Ax1.T + cov_eps_x1 - cov_zcy
-		grad_x1 = -0.5 * gamma1 * inv_eps_x1.T + dual_x1 + penalty_c * err_x1
+		grad_x1 = -0.5 * gamma1 * np.linalg.inv(cov_eps_x1).T + dual_x1 + penalty_c * err_x1 + dual_x1y + penalty_c * err_y1
 		new_eps_x1 = cov_eps_x1 -  ss_s * grad_x1
 		err_x2 = Ax2@cov_x2 @ Ax2.T + cov_eps_x2 - cov_zc
 		err_y2 = Ax2@cov_x2cy@Ax2.T + cov_eps_x2 - cov_zcy
-		grad_x2 = -0.5 * gamma2 * inv_eps_x2.T + dual_x2 + penalty_c * err_x2
+		grad_x2 = -0.5 * gamma2 * np.linalg.inv(cov_eps_x2).T + dual_x2 + penalty_c * err_x2 + dual_x2y + penalty_c * err_y2
 		new_eps_x2 = cov_eps_x2 - ss_s * grad_x2
 
 		# zc update
@@ -504,21 +499,16 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 		err_x2y = tmp_cov_z2y -new_zcy
 		dual_x2y += penalty_c * err_x2y 
 
-		# update inversion
-		inv_eps_x1 = np.linalg.inv(tmp_cov_z1)
-		inv_eps_x2 = np.linalg.inv(tmp_cov_z2)
-		inv_eps_x1y =np.linalg.inv(tmp_cov_z1y)
-		inv_eps_x2y = np.linalg.inv(tmp_cov_z2y)
-
-		# update Ax
-		grad_Ax1 = -gamma1 * inv_eps_x1.T @ Ax1 @ cov_x1 \
-					+ (dual_x1.T @ Ax1 @ cov_x1.T + dual_x1 @ Ax1 @ cov_x1) + penalty_c * err_x1 @ (Ax1 @ cov_x1 + Ax1 @ cov_x1.T) \
+		
+		grad_Ax1 = (dual_x1.T @ Ax1 @ cov_x1.T + dual_x1 @ Ax1 @ cov_x1) + penalty_c * err_x1 @ (Ax1 @ cov_x1 + Ax1 @ cov_x1.T) \
 					+ (dual_x1y.T @ Ax1 @ cov_x1cy.T + dual_x1y @ Ax1 @ cov_x1cy) + penalty_c * err_x1y @ (Ax1 @ cov_x1cy + Ax1 @ cov_x1cy.T)
 		new_Ax1 = Ax1 - ss_s * grad_Ax1
-		grad_Ax2 = -gamma2 * inv_eps_x2.T @ Ax2 @ cov_x2 \
-					+ (dual_x2.T @ Ax2 @ cov_x2.T + dual_x2 @ Ax2 @ cov_x2) + penalty_c * err_x2 @ (Ax2 @ cov_x2 + Ax2 @ cov_x2.T) \
+		
+		grad_Ax2 = (dual_x2.T @ Ax2 @ cov_x2.T + dual_x2 @ Ax2 @ cov_x2) + penalty_c * err_x2 @ (Ax2 @ cov_x2 + Ax2 @ cov_x2.T) \
 					+ (dual_x2y.T @ Ax2 @ cov_x2cy.T + dual_x2y @ Ax2 @ cov_x2cy) + penalty_c * err_x2y @ (Ax2 @ cov_x2cy + Ax2 @ cov_x2cy.T)
 		new_Ax2 = Ax2 - ss_s * grad_Ax2
+
+		# check error
 		# convergence check
 		conv_z1 = np.sqrt(np.sum(err_x1 ** 2))
 		conv_z2 = np.sqrt(np.sum(err_x2 ** 2))

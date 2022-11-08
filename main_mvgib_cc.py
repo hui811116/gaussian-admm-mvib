@@ -23,10 +23,13 @@ cov_y = np.eye(2)
 cov_x1y = np.array([
 	[-0.45, 0],
 	[0, .90]])
+#cov_x2y = np.array([
+#	[0,0.45],
+#	[-0.90, 0.0]]
+#	)
 cov_x2y = np.array([
-	[0,0.45],
-	[-0.90, 0.0]]
-	)
+	[0.10,0],
+	[0,.40]])
 #cov_x1x2 = np.array([
 #	[0.8, 0],
 #	[0, 0]])
@@ -59,13 +62,31 @@ samp_mat = np.linalg.cholesky(cov_all)
 print("sanity check passed.")
 # now solve the first view with GIB, can use BA for simplicity
 
-gamma_1 = 0.04
-maxiter = 10
-conv_thres = 1e-5
+print("sig_x12")
+print(cov_x12)
+
+print("sig_y")
+print(cov_y)
+print("sig_x12y")
+print(cov_x12y)
+
+tmp_x12cy = cov_x12 - cov_x12y @ np.linalg.inv(cov_y)@ cov_x12y.T
+print("sig_x12cy")
+print(tmp_x12cy)
+
+print("diff_sigx1-sigx1|y")
+print(cov_x1 - cov_x1y)
+
+print("diff_sigx2-sigx2|y")
+print(cov_x2 - cov_x2y)
+
+gamma_1 = 0.08
+maxiter = 40000
+conv_thres = 1e-4
 gamma_2 = 0.08
 nc = 2
 
-param_dict = {"penalty":98.0,"ss":1e-3}
+param_dict = {"penalty":128.0,"ss":1e-3}
 # find the common information
 #cc_out = alg.GaussianMvIBCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
 cc_out = alg.GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x1x2,cov_x1y,cov_x2y,nc,gamma_1,gamma_2,maxiter,conv_thres,**param_dict)
