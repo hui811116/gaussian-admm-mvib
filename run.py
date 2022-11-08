@@ -3,6 +3,7 @@ import sys
 import os
 import algorithms as alg
 import matplotlib.pyplot as plt
+from scipy.io import savemat
 
 rng = np.random.default_rng()
 
@@ -47,15 +48,17 @@ x_samp = mu[:,None] + mat_L @ noise
 
 # beta for GIB
 #gamma = 0.12
-beta_range = np.geomspace(1,10,num=32)
+beta_range = np.geomspace(1,32,num=64)
 #beta = 2.4
 # cond cov
 # nz = nx = 2
 #Ax = np.eye(2)
 # used to find Z= AX + eps
 #cov_eps = np.eye(2)
+penalty_c = 32.0
+ss_fixed = 4e-3
 
-niter = 10000
+niter = 50000
 conv_thres = 1e-5
 debug = False
 if debug:
@@ -84,7 +87,7 @@ for bidx,beta in enumerate(beta_range):
 	ker_zy= ba_A @ cov_xcy@ba_A.T + ba_eps
 	mizx = 0.5 *np.log(np.linalg.det(ker_z)/np.linalg.det(ker_zx)) #nats
 	mizy = 0.5 *np.log(np.linalg.det(ker_z)/np.linalg.det(ker_zy)) #nats
-	print("beta={:.4f},mizx={:.4f}, mizy={:.4f}, niter={:}, conv={:}".format(beta,mizx,mizy,itcnt,conv))
+	print("method=BA,beta={:.4f},mizx={:.4f}, mizy={:.4f}, niter={:}, conv={:}".format(beta,mizx,mizy,itcnt,conv))
 	res_all[bidx,:] = np.array([mizx,mizy,itcnt,conv])
 '''	
 	tmp_conv = 0
@@ -98,7 +101,7 @@ for bidx,beta in enumerate(beta_range):
 '''
 res_admm1 = np.zeros((len(beta_range),4))
 for bidx,beta in enumerate(beta_range):
-	out_dict = alg.GaussianADMMIB(cov_x,cov_y,cov_xy,beta,niter,conv_thres)
+	out_dict = alg.GaussianADMMIB(cov_x,cov_y,cov_xy,beta,niter,conv_thres,**{"penalty":penalty_c,"ss":ss_fixed})
 	itcnt = out_dict['niter']
 	conv = out_dict['conv']
 	if conv:
@@ -116,7 +119,7 @@ for bidx,beta in enumerate(beta_range):
 
 res_admm2 = np.zeros((len(beta_range),4))
 for bidx,beta in enumerate(beta_range):
-	out_dict = alg.GaussianADMMIB2(cov_x,cov_y,cov_xy,beta,niter,conv_thres)
+	out_dict = alg.GaussianADMMIB2(cov_x,cov_y,cov_xy,beta,niter,conv_thres,**{"penalty":penalty_c,"ss":ss_fixed})
 	itcnt = out_dict['niter']
 	conv = out_dict['conv']
 	if conv:
@@ -131,6 +134,14 @@ for bidx,beta in enumerate(beta_range):
 		mizx = 0
 		mizy=  0
 	res_admm2[bidx,:] = np.array([mizx,mizy,itcnt,conv])
+
+# saving results as .mat file
+ba_dict = {"results_array":res_all,'method':"ba"}
+admm1_dict= {"results_array":res_admm1,"method":"admm1"}
+admm2_dict= {"results_array":res_admm2,"method":"admm2"}
+savemat("ba_results.mat",ba_dict)
+savemat("admm1_results.mat",admm1_dict)
+savemat("admm2_results.mat",admm2_dict)
 
 fig,ax = plt.subplots()
 sel_idx = res_all[:,3] ==True
