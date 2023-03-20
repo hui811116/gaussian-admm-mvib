@@ -3,6 +3,7 @@ import sys
 import os
 import copy
 import utils as ut
+from numpy.random import default_rng
 
 def GaussianBA(covx,covy,covxy,beta,maxiter,convthres,**kwargs):
 	# precomputing
@@ -15,6 +16,45 @@ def GaussianBA(covx,covy,covxy,beta,maxiter,convthres,**kwargs):
 	id_x = np.eye(nx)
 	Ax = np.eye(nx) # linear mapping of X as mean of Z
 	cov_eps = np.eye(nx) # second order statistic for Z
+	itcnt = 0
+	conv_flag = False
+	ker_ycxxinv = id_x - cov_xcy@inv_covx
+	while itcnt < maxiter:
+		itcnt+=1
+		new_cov_z = Ax @ covx @ Ax.T + cov_eps
+		new_cov_zcy = Ax @ cov_xcy @ Ax.T + cov_eps
+		inv_cov_zcy = np.linalg.inv(new_cov_zcy)
+		cov_eps_nex = np.linalg.inv(beta * inv_cov_zcy - (beta-1) * np.linalg.inv(new_cov_z))
+		new_Ax = beta * cov_eps_nex @ inv_cov_zcy @ Ax@ ker_ycxxinv
+		# convergence criterion
+		fnorm_ax = np.sqrt(np.sum((new_Ax - Ax)**2))
+		fnorm_eps = np.sqrt(np.sum((cov_eps_nex - cov_eps)**2))
+		if fnorm_ax < convthres and fnorm_eps < convthres:
+			conv_flag = True
+			break
+		else:
+			Ax = new_Ax
+			cov_eps = cov_eps_nex
+	return {"Ax":Ax,"cov_eps":cov_eps,"conv":conv_flag,"niter":itcnt}
+
+# this is essentially the same as the BA, but the representation dimension is the smallest among the two
+def GaussianBACC(covx,covy,covxy,beta,maxiter,convthres,**kwargs):
+	# precomputing
+	rng = np.random.default_rng()
+	nz = kwargs['nz']
+	# always, Nz=Nx
+	nx = covx.shape[0]
+	ny = covy.shape[0]
+	cov_xcy = covx - covxy @ np.linalg.inv(covy) @ covxy.T
+	cov_ycx = covy - covxy.T @ np.linalg.inv(covx) @ covxy
+	inv_covx = np.linalg.inv(covx)
+	id_x = np.eye(nx)
+	#Ax = np.eye(nx) # linear mapping of X as mean of Z
+	ax_append = rng.random((nz,nx-nz))
+	# normalize the elements
+	ax_append /= np.linalg.norm(ax_append,axis=0)
+	Ax = np.block([np.eye(nz),ax_append])
+	cov_eps = np.eye(nz) # second order statistic for Z
 	itcnt = 0
 	conv_flag = False
 	ker_ycxxinv = id_x - cov_xcy@inv_covx
@@ -347,6 +387,7 @@ def GaussianADMMMvIBInc(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxit
 		mizycz1 = 0
 	return {"conv":conv_flag,"niter":itcnt,"Ax":Ax,"cov_eps_x":cov_eps_zcx,"cov_eps_y":cov_eps_z,"mixcz":mizxcz1,"miycz":mizycz1}
 
+'''
 def GaussianMvIBCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gamma2,maxiter,convthres,**kwargs):
 	penalty_c = kwargs["penalty"]
 	ss_all = kwargs["ss"]
@@ -439,16 +480,24 @@ def GaussianMvIBCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gamma2,
 		micx = 0
 		micy = 0
 	return {"conv":conv_flag,"niter":itcnt,"cov_eps_z":cov_eps_c,"Ax":Ax,"cov_z":cov_zc,"cov_zcy":cov_zcy,"micx":micx,"micy":micy}
-
+'''
 
 def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gamma2,maxiter,convthres,**kwargs):
 	# distributed learning version
+	(nx1,nx2) = cov_x12.shape
+	rng = np.random.default_rng()
 	penalty_c = kwargs["penalty"]
 	ss_s = kwargs["ss"]
-	Ax1 = np.zeros((nc,cov_x1.shape[0]))
-	Ax1[:nc,:nc] = np.eye(nc)
-	Ax2 = np.zeros((nc,cov_x2.shape[0]))
-	Ax2[:nc,:nc] = np.eye(nc)
+	#Ax1 = np.zeros((nc,cov_x1.shape[0]))
+	#Ax1[:nc,:nc] = np.eye(nc)
+	tmp_rnd1 = rng.random((nc,nx1-nc))
+	tmp_rnd1 /= np.linalg.norm(tmp_rnd1,axis=0)
+	Ax1 = np.block([np.eye(nc),tmp_rnd1])
+	#Ax2 = np.zeros((nc,cov_x2.shape[0]))
+	#Ax2[:nc,:nc] = np.eye(nc)
+	tmp_rnd2 = rng.random((nc,nx2-nc))
+	tmp_rnd2 /= np.linalg.norm(tmp_rnd2,axis=0)
+	Ax2 = np.block([np.eye(nc),tmp_rnd2])
 	cov_eps_x1 = np.eye(nc)
 	cov_eps_x2 = np.eye(nc)
 
@@ -528,7 +577,7 @@ def GaussianMvIBCondCc(cov_x1,cov_x2,cov_y,cov_x12,cov_x1y,cov_x2y,nc,gamma1,gam
 			cov_zcy = new_zcy
 			Ax1 = new_Ax1
 			Ax2 = new_Ax2
-	return {"conv":conv_flag,"niter":itcnt,"cov_z":cov_zc,"cov_zcy":cov_zcy,"Ax1":Ax1,"Ax2":Ax2}
+	return {"conv":conv_flag,"niter":itcnt,"cov_z":cov_zc,"cov_zcy":cov_zcy,"Ax1":Ax1,"Ax2":Ax2,"cov_eps1":cov_eps_x1,"cov_eps2":cov_eps_x2}
 
 
 def GaussianMvIBIncBA(cov_x2,cov_z1,cov_x2z1,cov_y,cov_yz1,cov_x2y,gamma,maxiter,convthres,**kwargs):

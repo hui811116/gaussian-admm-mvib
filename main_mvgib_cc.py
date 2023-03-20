@@ -81,8 +81,8 @@ print("diff_sigx2-sigx2|y")
 print(cov_x2 - cov_x2y)
 
 gamma_1 = 0.08
-maxiter = 40000
-conv_thres = 1e-4
+maxiter = 100000
+conv_thres = 1e-5
 gamma_2 = 0.08
 nc = 2
 

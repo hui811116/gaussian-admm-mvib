@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import os
+from scipy.io import savemat
 
 # loading the results
 with open("result_all/result_sv_v1_ba.npy",'rb') as fid:
@@ -24,6 +25,20 @@ with open("result_all/gmvib_incba_b128_g128_bmax4096_gmin1e-3_x12.npy",'rb') as 
 	res_incba_x12 = np.load(fid)
 with open("result_all/gmvib_incba_b128_g128_bmax1024_gmin1e-3_x21.npy",'rb') as fid:
 	res_incba_x21 = np.load(fid)
+
+with open("results_cc_penc64_ss2.00e-3_gnum32.npy",'rb') as fid:
+	res_cc_raw = np.load(fid)
+#print(res_cc_raw)
+# gamma,nrun, conv, niter, mizcx1, mizcx2, mizcy, ent_zc, com_info
+sel_idx = np.logical_and(res_cc_raw[:,2] ==1,res_cc_raw[:,8]==res_cc_raw[:,8])
+sel_cc_raw = res_cc_raw[sel_idx,:]
+#savemat("clean_cc_results.mat",{"results_array":sel_cc_raw.astype("float32"),"method":"conscmpl"})
+#sys.exit()
+
+with open("result_merge_bacc.npy",'rb') as fid:
+	res_bacc = np.load(fid)
+#savemat("mvgib_ccba_results.mat",{"results_array":res_bacc,"method":"bacc"})
+#sys.exit()
 
 def ibOptSelect(pairs_mi,precision):
 	(mizx,mizy) = pairs_mi
@@ -101,6 +116,11 @@ ax.scatter(process_grid_x12[:,0],process_grid_x12[:,1],24,label=r"Proposed Inc."
 #process_grid_x21 = ibOptSelect((combine_inc_grid_x21[:,2]+combine_inc_grid_x21[:,4],combine_inc_grid_x21[:,3]+combine_inc_grid_x21[:,5]),1)
 #ax.scatter(process_grid_x21[:,0],process_grid_x21[:,1],24,label=r"Proposed Inc. $X_{2,1}$",color="tab:cyan",marker="o",facecolor="none")
 
+# saving as MATLAB results
+# savemat("mvgib_merge.mat",{"method":"merge",'results_array':res_merge})
+# savemat("mvgib_incba_x12.mat",{"method":"incba",'results_array':process_incba_x12})
+# savemat("mvgib_grid_x12.mat",{"method":"inc","results_array":process_grid_x12})
+
 ax.grid("on")
 ax.set_xlabel(r"$I(\{Z\};X)$ nats",fontsize=fs_lab)
 ax.set_ylabel(r"$I(\{Z\};Y)$ nats",fontsize=fs_lab)
@@ -114,7 +134,7 @@ ax.set_xlim([0,8.3])
 ax.set_xlim([5,8.3])
 ax.set_ylim([0.9,1.0])
 plt.tight_layout()
-plt.savefig("figure_zoom_ibcurve.eps",format="eps")
+#plt.savefig("figure_zoom_ibcurve.eps",format="eps")
 plt.show()
 
 # plot the progressing
